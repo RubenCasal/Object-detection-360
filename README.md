@@ -77,23 +77,31 @@ source install/setup.bash
 
 
 4. **YOLOv8 Object Detection (Parallelizable)**
-   - Each stereographic view is passed to the YOLOv8 detector.
-   - Detected objects' bounding boxes (center x, center y, width, height), confidence scores, and class IDs are retrieved.
 
-5. **Reprojection of Bounding Boxes to Panorama**
+   -All four stereographic projections are processed together as a batch to maximize inference efficiency.
+
+   -YOLO model (any version supported by Ultralytics) is used to detect objects.
+
+   -Detected objects' bounding boxes (center x, center y, width, height), confidence scores, and class IDs are retrieved.
+
+     <p align="center">
+    <img src="./readme_images/projections_detection.png" alt="4 projections detections" width="700">
+    </p>
+
+6. **Reprojection of Bounding Boxes to Panorama**
    - Each bounding box is mapped back from the stereographic view into the original panorama coordinates.
    - Special logic handles **wrap-around** effects when objects cross the 0°/360° seam.
 
-6. **Custom Global NMS: Greedy Merge**
+7. **Custom Global NMS: Greedy Merge**
    - Detected boxes from different projections are clustered by their IoU (> 0.2).
    - In each cluster, only the box with the largest area is kept.
    - This removes duplicated detections caused by overlapping projections and seam crossings.
 
-7. **Draw Annotated Image**
+8. **Draw Annotated Image**
    - The selected detections are drawn with class labels and confidence scores.
    - Standard YOLOv8 color coding is applied.
 
-8. **Publish Final Outputs**
+9. **Publish Final Outputs**
    - The annotated panorama is published on `/annotated_panorama`.
    - The individual stereographic views are optionally published on `/image_projection1`, `/image_projection2`, etc., for debugging.
 
