@@ -1,19 +1,17 @@
-# tracker_360: 360° Panorama Object Detection Node for ROS 2
+# tracker\_360: 360° Panorama Object Detection Node for ROS 2
 
 ## Overview
 
-tracker_360 is a ROS 2 package that enables real-time object detection on 360° equirectangular panorama images. It uses stereographic sub-projections to divide the panorama into four views, detects objects individually, and reprojects the detections onto the panorama.
+`tracker_360` is a ROS 2 package that enables real-time object detection on 360° equirectangular panorama images. It uses stereographic sub-projections to divide the panorama into four views, detects objects individually, and reprojects the detections onto the panorama.
 
-This package has been specifically designed to solve the common problem of duplicate detections at the horizontal seams of 360° images. Objects crossing the 0°/360° boundary — such as people partially visible on each side of the panorama — can often be detected twice. Our method uses custom reprojection and merging logic to robustly unify duplicated detections, as illustrated below:
+This package has been specifically designed to solve the common problem of **duplicate detections** at the horizontal seams of 360° images. Objects crossing the 0°/360° boundary — such as people partially visible on each side of the panorama — can often be detected twice. Our method uses custom reprojection and merging logic to robustly **unify duplicated detections**, as illustrated below:
 
-<p align="center">
-<img src="./readme_images/duplication_problem.png" alt="Live Mode" width="600">
-</p>
-Inspired by:
+![Duplication Problem Example](readme_images/duplication_problem.png)
+
+This implementation is inspired by the paper:
 
 > Wenyan Yang, Yanlin Qian, Joni-Kristian Kämäräinen, "Object Detection in Equirectangular Panorama," CVPR Workshops, 2018.
 
----
 ## Installation
 
 ### 1. System Prerequisites
@@ -53,62 +51,43 @@ source install/setup.bash
 
 ## Detailed Workflow
 
-### 1. Subscribe to the Panorama Stream
+1. **Subscribe to Panorama**
+   - Subscribes to `/stitched_image` (`sensor_msgs/Image`) containing an equirectangular 360° panorama.
 
-- The node subscribes to `/stitched_image` (`sensor_msgs/msg/Image`), which must publish a **stitched equirectangular 360° image** (2:1 width/height ratio).
-- These images typically come from a panoramic camera (e.g., Ricoh Theta Z1).
+2. **Precompute LUTs (Lookup Tables)**
+   - On node initialization, four LUTs are generated for yaw angles 0°, 90°, 180°, and 270°.
+   - Each LUT defines how pixels are mapped from the panorama to the corresponding stereographic view.
+   - 
+   **How LUTs are generated:**
+   - For each yaw, the panorama is "sampled" into a stereographic plane using `generate_lut()`.
+   - `generate_lut()` calculates spherical coordinates for each target pixel, using the yaw and pitch angles.
+   - Each pixel in the stereographic view corresponds to a calculated `(u, v)` coordinate in the original panorama.
+   - `map_U` and `map_V` matrices are generated, which are later used by `cv2.remap()` for fast pixel transformations at runtime.
 
-### 2. LUT (Lookup Table) Precomputation
+3. **Apply Projections (Parallelized)**
+   - When a frame arrives, it is simultaneously projected into four images using the precomputed LUTs.
+   - `ThreadPoolExecutor` is used to parallelize remapping.
 
-- On startup, the node precomputes **4 LUTs** (pixel remappings) using `precompute_stereo_luts()`:
-  - Each LUT corresponds to a yaw angle: **0°, 90°, 180°, 270°**.
-  - This defines how each pixel in the stereographic projection maps back to the original panorama.
-- This is done **once** to avoid recalculating mappings every frame (critical for real-time performance).
+4. **YOLOv8 Object Detection (Parallelizable)**
+   - Each stereographic view is passed to the YOLOv8 detector.
+   - Detected objects' bounding boxes (center x, center y, width, height), confidence scores, and class IDs are retrieved.
 
-### 3. Panorama Projection into Stereographic Views (Parallelized)
+5. **Reprojection of Bounding Boxes to Panorama**
+   - Each bounding box is mapped back from the stereographic view into the original panorama coordinates.
+   - Special logic handles **wrap-around** effects when objects cross the 0°/360° seam.
 
-- When a panorama frame arrives, `apply_stereo_luts_parallel()` is called:
-  - Each LUT is used to remap the panorama to a stereographic view using `cv2.remap()`.
-  - Projections are computed **in parallel** using a `ThreadPoolExecutor`, one thread per LUT.
-- Result: **4 stereographic views** (one for each yaw) are created **simultaneously**.
+6. **Custom Global NMS: Greedy Merge**
+   - Detected boxes from different projections are clustered by their IoU (> 0.2).
+   - In each cluster, only the box with the largest area is kept.
+   - This removes duplicated detections caused by overlapping projections and seam crossings.
 
-### 4. YOLOv8 Object Detection on Projections (Parallel Inference)
+7. **Draw Annotated Image**
+   - The selected detections are drawn with class labels and confidence scores.
+   - Standard YOLOv8 color coding is applied.
 
-- Each stereographic view is passed independently to the YOLOv8 model using `detect_on_projections()`.
-- Each detection produces:
-  - Bounding boxes (center x, center y, width, height)
-  - Confidence scores
-  - Class IDs
-- This step can also be parallelized further (future optimization) to maximize GPU/CPU usage.
-
-### 5. Reprojection of Bounding Boxes onto the Panorama
-
-- Each detection's bounding box (from the stereographic plane) is **reprojected back** onto the panorama.
-- This involves:
-  - Applying the inverse of the stereographic transformation using `map_to_sphere()`.
-  - Mapping the spherical coordinates to 2D UV coordinates of the panorama.
-  - Correcting for **wrap-around** (boxes that cross 0°/360° horizontal seam).
-
-### 6. Global NMS across Projections (Greedy Merge by Area)
-
-- After reprojecting all detections:
-  - Overlapping boxes from different projections are grouped based on Intersection over Union (IoU > 0.2).
-  - Inside each group, only the **largest box** (in area) is kept.
-- This custom `greedy_merge_largest_box()` algorithm avoids multiple detections of the same object appearing on panorama seams.
-
-### 7. Drawing the Final Annotated Panorama
-
-- The surviving boxes are drawn on the panorama using:
-  - YOLOv8 standard colors for class IDs (`ultralytics.utils.plotting.colors()`).
-  - Class names and confidence scores over each box.
-- Visualization is clean and consistent with YOLOv8 styling.
-
-### 8. Publishing the Final Outputs
-
-- The final **annotated panorama** is published to `/annotated_panorama`.
-- The four **stereographic projections** are also published to `/image_projection1` to `/image_projection4` for debugging purposes.
-
----
+8. **Publish Final Outputs**
+   - The annotated panorama is published on `/annotated_panorama`.
+   - The individual stereographic views are optionally published on `/image_projection1`, `/image_projection2`, etc., for debugging.
 
 ## ROS 2 Usage
 
@@ -128,46 +107,43 @@ ros2 launch tracker_360 multi_person_tracker.launch.py \
 ```
 
 Launch arguments:
-- `stereo_image_size`: Size (W x H) for each stereographic projection.
-- `confidence_threshold`: Minimum score to accept detections.
-- `model_path`: Path to your YOLOv8 model weights.
+- `stereo_image_size`: Size of each stereographic view.
+- `confidence_threshold`: Minimum score for object acceptance.
+- `model_path`: Path to your YOLOv8 model.
 
----
+### Topics
 
-## ROS 2 Topics
-
-| Topic Name              | Type                 | Direction | Description                                |
-|------------------------- |----------------------|-----------|--------------------------------------------|
-| `/stitched_image`        | `sensor_msgs/msg/Image` | Sub      | Input panorama image                       |
-| `/annotated_panorama`    | `sensor_msgs/msg/Image` | Pub      | Final annotated panorama with detections   |
-| `/image_projection1-4`   | `sensor_msgs/msg/Image` | Pub      | Intermediate stereographic projected views |
-
----
+| Topic Name             | Type                | Direction | Description                          |
+| ---------------------- | ------------------- | --------- | ------------------------------------ |
+| `/stitched_image`      | `sensor_msgs/Image` | Sub       | Input panorama image                 |
+| `/image_projection1-4` | `sensor_msgs/Image` | Pub       | Projected views for debugging        |
+| `/annotated_panorama`  | `sensor_msgs/Image` | Pub       | Final panorama with detections       |
 
 ## Example Commands
 
 ```bash
-# Launch the node manually
+# Launch the node
 ros2 run tracker_360 multi_person_tracker --ros-args \
   -p stereo_image_size:="448x448" \
   -p confidence_threshold:=0.6 \
-  -p model_path:="~/models/yolov8n.pt"
+  -p model_path:="~/models/yolov8m.pt"
 
-# Visualize the result
+# Visualize the output
 rqt_image_view /annotated_panorama
 ```
 
----
+## Limitations & Future Work
+
+- **Seam Issues**: Minor misalignment artifacts may still appear for objects split between views.
+- **Inference Speed**: Planned future improvement includes ONNX+TensorRT acceleration and better inference parallelization.
+- **Dynamic FOV Adjustment**: Adapting projection FOVs based on object density for better coverage.
 
 ## References
 
-- Wenyan Yang, Yanlin Qian, Joni-Kristian Kämäräinen,  
-  ["Object Detection in Equirectangular Panorama," CVPR Workshops, 2018](https://openaccess.thecvf.com/content_cvpr_2018_workshops/w15/html/Yang_Object_Detection_in_CVPR_2018_paper.html)
-- [Ultralytics YOLOv8 Official Repository](https://github.com/ultralytics/ultralytics)
+- Wenyan Yang et al., "Object Detection in Equirectangular Panorama," CVPR Workshops, 2018.
+- Ultralytics YOLOv8: [https://github.com/ultralytics/ultralytics](https://github.com/ultralytics/ultralytics)
 
 ---
 
-*Created for high-performance 360° object perception using ROS 2.*
-
-
+*Created by Your Name — for advanced ROS 2 perception applications.*
 
