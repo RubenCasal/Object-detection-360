@@ -49,7 +49,7 @@ def greedy_merge_largest_box(boxes, scores, iou_thres=0.5):
     return torch.tensor(keep, dtype=torch.long)
 
 
-def stereo_bboxes_to_panorama(detections_with_meta, pano_img, stereo_img_size, FOV, model, iou_thres=0.2):
+def stereo_bboxes_to_panorama(detections_with_meta, pano_img, stereo_img_size, FOV, model, iou_thres=0.7):
 
     pano_h, pano_w = pano_img.shape[:2]
     W, H = stereo_img_size

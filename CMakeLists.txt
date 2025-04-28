@@ -88,7 +88,6 @@ install(DIRECTORY include/
   DESTINATION include/
 )
 install(FILES
-  yolov11n-face.pt
   DESTINATION share/${PROJECT_NAME}
 )
 
