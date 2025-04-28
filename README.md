@@ -10,6 +10,42 @@ Inspired by:
 > Wenyan Yang, Yanlin Qian, Joni-Kristian Kämäräinen, "Object Detection in Equirectangular Panorama," CVPR Workshops, 2018.
 
 ---
+## Installation
+
+### 1. System Prerequisites
+
+```bash
+sudo apt update
+sudo apt install -y \
+  python3-colcon-common-extensions \
+  ros-humble-cv-bridge \
+  libopencv-dev \
+  libgstreamer1.0-dev \
+  libgstreamer-plugins-base1.0-dev \
+  libgstreamer-plugins-bad1.0-dev \
+  libglib2.0-dev \
+  libusb-1.0-0-dev
+```
+
+### 2. Python Dependencies
+
+```bash
+pip3 install --user \
+  ultralytics \
+  opencv-python \
+  numpy \
+  torch torchvision
+```
+
+### 3. Clone & Build
+
+```bash
+cd ~/ros2_ws/src
+git clone https://github.com/YourOrg/tracker_360.git
+cd ~/ros2_ws
+colcon build --packages-select tracker_360
+source install/setup.bash
+```
 
 ## Detailed Workflow
 
@@ -128,3 +164,6 @@ rqt_image_view /annotated_panorama
 ---
 
 *Created for high-performance 360° object perception using ROS 2.*
+
+
+
