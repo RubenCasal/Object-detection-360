@@ -1,0 +1,8 @@
+./models
+./scripts/multi_person_tracker_copia.py
+./scripts/yolo_tracker.py
+./src/ricoh_theta_node_copia.cpp
+.yolov8n.pt 
+.yolov11n-face.pt 
+./launch/single_tracker_launch.py
+./include/tracker_360/theta_drive_lib_copia.hpp
