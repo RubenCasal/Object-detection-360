@@ -7,7 +7,7 @@ tracker_360 is a ROS 2 package that enables real-time object detection on 360° 
 This package has been specifically designed to solve the common problem of duplicate detections at the horizontal seams of 360° images. Objects crossing the 0°/360° boundary — such as people partially visible on each side of the panorama — can often be detected twice. Our method uses custom reprojection and merging logic to robustly unify duplicated detections, as illustrated below:
 
 <p align="center">
-<img src="./readme_images/duplication_problem.png" alt="Live Mode" width="300">
+<img src="./readme_images/duplication_problem.png" alt="Live Mode" width="600">
 </p>
 Inspired by:
 
