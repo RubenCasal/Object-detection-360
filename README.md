@@ -4,12 +4,11 @@
 
 `tracker_360` is a ROS 2 package that enables real-time object detection on 360° equirectangular panorama images. It uses stereographic sub-projections to divide the panorama into four views, detects objects individually, and reprojects the detections onto the panorama.
 
-This package has been specifically designed to solve the common problem of **duplicate detections** at the horizontal seams of 360° images. Objects crossing the 0°/360° boundary — such as people partially visible on each side of the panorama — can often be detected twice. Our method uses custom reprojection and merging logic to robustly **unify duplicated detections**, as illustrated below:
+This package has been specifically designed to solve the common problem of **duplicate detections** at the horizontal seams of 360° images. Objects crossing the 0°/360° boundary — such as people partially visible on each side of the panorama — can often be detected twice. Our method uses custom reprojection and merging logic to robustly **unify duplicated detections**, as illustrated below.
 
 <p align="center">
 <img src="./readme_images/duplication_problem.png" alt="Duplicated Object Problem" width="600">
 </p>
-
 
 This implementation is inspired by the paper:
 
@@ -54,56 +53,66 @@ source install/setup.bash
 
 ## Detailed Workflow
 
-1. **Subscribe to Panorama**
-   - Subscribes to `/stitched_image` (`sensor_msgs/Image`) containing an equirectangular 360° panorama.
+### 1. Subscribe to Panorama
 
-2. **Precompute LUTs (Lookup Tables)**
-   - On node initialization, four LUTs are generated for yaw angles 0°, 90°, 180°, and 270°.
-   - Each LUT defines how pixels are mapped from the panorama to the corresponding stereographic view.
-   - 
-   **How LUTs are generated:**
-   - For each yaw, the panorama is "sampled" into a stereographic plane using `generate_lut()`.
-   - `generate_lut()` calculates spherical coordinates for each target pixel, using the yaw and pitch angles.
-   - Each pixel in the stereographic view corresponds to a calculated `(u, v)` coordinate in the original panorama.
-   - `map_U` and `map_V` matrices are generated, which are later used by `cv2.remap()` for fast pixel transformations at runtime.
+- Subscribes to `/stitched_image` (`sensor_msgs/Image`) containing an equirectangular 360° panorama.
 
-3. **Apply Projections (Parallelized)**
-   - When a frame arrives, it is simultaneously projected into four images using the precomputed LUTs.
-   - `ThreadPoolExecutor` is used to parallelize remapping.
-   
-    <p align="center">
+### 2. Precompute LUTs (Lookup Tables)
+
+- On node initialization, four LUTs are generated for yaw angles 0°, 90°, 180°, and 270°.
+- Each LUT defines how pixels are mapped from the panorama to the corresponding stereographic view.
+
+**How LUTs are generated:**
+- For each yaw angle, the panorama image is sampled into a stereographic plane.
+- The planar (x, y) coordinates are mapped into spherical coordinates (theta, phi) using `map_to_sphere`.
+- These spherical coordinates are then converted into 2D UV pixel coordinates for the panorama.
+- LUTs store this mapping, so projecting images is reduced to a fast `cv2.remap()` at runtime.
+
+### 3. Apply Projections (Parallelized)
+
+- When a frame arrives, it is simultaneously projected into four stereographic views using the precomputed LUTs.
+- Projections are computed in parallel using `ThreadPoolExecutor`.
+
+<p align="center">
     <img src="./readme_images/four_projection_corrected.png" alt="4 projections" width="650">
     </p>
 
+### 4. YOLO Object Detection (Batch Parallelizable)
 
-4. **YOLOv8 Object Detection (Parallelizable)**
+- All four stereographic projections are batched together and passed through a YOLO model (model-agnostic, not limited to YOLOv8).
+- This batch inference improves overall GPU utilization and minimizes latency.
+- Each detection outputs bounding boxes (center x, center y, width, height), confidence scores, and class IDs.
 
-   -All four stereographic projections are processed together as a batch to maximize inference efficiency.
-
-   -YOLO model (any version supported by Ultralytics) is used to detect objects.
-
-   -Detected objects' bounding boxes (center x, center y, width, height), confidence scores, and class IDs are retrieved.
-
-     <p align="center">
+<p align="center">
     <img src="./readme_images/projections_detection.png" alt="4 projections detections" width="700">
     </p>
 
-6. **Reprojection of Bounding Boxes to Panorama**
-   - Each bounding box is mapped back from the stereographic view into the original panorama coordinates.
-   - Special logic handles **wrap-around** effects when objects cross the 0°/360° seam.
+### 5. Reprojection of Bounding Boxes to Panorama
 
-7. **Custom Global NMS: Greedy Merge**
-   - Detected boxes from different projections are clustered by their IoU (> 0.2).
-   - In each cluster, only the box with the largest area is kept.
-   - This removes duplicated detections caused by overlapping projections and seam crossings.
+After detection on the stereographic projections, bounding boxes must be accurately mapped back to the original panorama.
 
-8. **Draw Annotated Image**
-   - The selected detections are drawn with class labels and confidence scores.
-   - Standard YOLOv8 color coding is applied.
+- First, the bounding box corners (top-left and bottom-right) are rescaled relative to the stereographic view.
+- These corners are inverse-mapped to spherical coordinates using `map_to_sphere`.
+- Spherical coordinates are then converted to UV pixel coordinates in the panorama.
+- Special logic corrects wrap-around at the 0°/360° seam to ensure correct bounding box representation.
 
-9. **Publish Final Outputs**
-   - The annotated panorama is published on `/annotated_panorama`.
-   - The individual stereographic views are optionally published on `/image_projection1`, `/image_projection2`, etc., for debugging.
+### 6. Global NMS (Greedy Merge)
+
+- After reprojection, bounding boxes from all projections are grouped.
+- The custom `greedy_merge_largest_box()` algorithm is applied:
+  - Detections with IoU > 0.2 are clustered together.
+  - For each cluster, only the box with the largest score-weighted area is kept.
+- This method effectively removes duplicated detections from overlapping regions and projection seams.
+
+### 7. Draw Annotated Image
+
+- The selected detections are drawn with class labels and confidence scores.
+- Standard YOLO color coding is applied.
+
+### 8. Publish Final Outputs
+
+- The annotated panorama is published on `/annotated_panorama`.
+- The individual stereographic views are optionally published on `/image_projection1`, `/image_projection2`, etc., for debugging.
 
 ## ROS 2 Usage
 
@@ -123,17 +132,18 @@ ros2 launch tracker_360 multi_person_tracker.launch.py \
 ```
 
 Launch arguments:
+
 - `stereo_image_size`: Size of each stereographic view.
 - `confidence_threshold`: Minimum score for object acceptance.
-- `model_path`: Path to your YOLOv8 model.
+- `model_path`: Path to your YOLO model.
 
 ### Topics
 
-| Topic Name             | Type                | Direction | Description                          |
-| ---------------------- | ------------------- | --------- | ------------------------------------ |
-| `/stitched_image`      | `sensor_msgs/Image` | Sub       | Input panorama image                 |
-| `/image_projection1-4` | `sensor_msgs/Image` | Pub       | Projected views for debugging        |
-| `/annotated_panorama`  | `sensor_msgs/Image` | Pub       | Final panorama with detections       |
+| Topic Name             | Type                | Direction | Description                    |
+| ---------------------- | ------------------- | --------- | ------------------------------ |
+| `/stitched_image`      | `sensor_msgs/Image` | Sub       | Input panorama image           |
+| `/image_projection1-4` | `sensor_msgs/Image` | Pub       | Projected views for debugging  |
+| `/annotated_panorama`  | `sensor_msgs/Image` | Pub       | Final panorama with detections |
 
 ## Example Commands
 
@@ -157,7 +167,7 @@ rqt_image_view /annotated_panorama
 ## References
 
 - Wenyan Yang et al., "Object Detection in Equirectangular Panorama," CVPR Workshops, 2018.
-- Ultralytics YOLOv8: [https://github.com/ultralytics/ultralytics](https://github.com/ultralytics/ultralytics)
+- Ultralytics YOLO: [https://github.com/ultralytics/ultralytics](https://github.com/ultralytics/ultralytics)
 
 ---
 
