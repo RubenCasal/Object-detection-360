@@ -6,7 +6,10 @@
 
 This package has been specifically designed to solve the common problem of **duplicate detections** at the horizontal seams of 360° images. Objects crossing the 0°/360° boundary — such as people partially visible on each side of the panorama — can often be detected twice. Our method uses custom reprojection and merging logic to robustly **unify duplicated detections**, as illustrated below:
 
-![Duplication Problem Example](readme_images/duplication_problem.png)
+<p align="center">
+<img src="./readme_images/duplication_problem.png" alt="Duplicated Object Problem" width="600">
+</p>
+
 
 This implementation is inspired by the paper:
 
@@ -67,6 +70,11 @@ source install/setup.bash
 3. **Apply Projections (Parallelized)**
    - When a frame arrives, it is simultaneously projected into four images using the precomputed LUTs.
    - `ThreadPoolExecutor` is used to parallelize remapping.
+   
+    <p align="center">
+    <img src="./readme_images/four_projection_corrected.png" alt="4 projections" width="650">
+    </p>
+
 
 4. **YOLOv8 Object Detection (Parallelizable)**
    - Each stereographic view is passed to the YOLOv8 detector.
