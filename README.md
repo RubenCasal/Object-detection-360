@@ -2,9 +2,13 @@
 
 ## Overview
 
-`tracker_360` is a ROS 2 package that performs real-time object detection on 360° equirectangular panorama images.  
-It divides the panorama into stereographic projections, detects objects independently, and reprojects them back to the panorama.
+tracker_360 is a ROS 2 package that enables real-time object detection on 360° equirectangular panorama images. It uses stereographic sub-projections to divide the panorama into four views, detects objects individually, and reprojects the detections onto the panorama.
 
+This package has been specifically designed to solve the common problem of duplicate detections at the horizontal seams of 360° images. Objects crossing the 0°/360° boundary — such as people partially visible on each side of the panorama — can often be detected twice. Our method uses custom reprojection and merging logic to robustly unify duplicated detections, as illustrated below:
+
+<p align="center">
+<img src="./readme_images/duplication_problem.png" alt="Live Mode" width="300">
+</p>
 Inspired by:
 
 > Wenyan Yang, Yanlin Qian, Joni-Kristian Kämäräinen, "Object Detection in Equirectangular Panorama," CVPR Workshops, 2018.
