@@ -70,7 +70,7 @@ Each LUT encodes how pixels in a stereographic projection view map to sampling l
 
 - A virtual tangent plane is defined, centered on the unit sphere at the desired yaw and pitch angles.
 - For every pixel (x,y) in this planar view:
-  - It is mapped to a point (θ, Φ) on the sphere using the inverse stereographic projection (based on Eq. (1) from the paper).
+  - It is mapped to a point (θ, Φ) on the sphere using the inverse stereographic projection of the paper.
   - (θ, Φ) represent spherical coordinates: latitude and longitude.
   - These spherical coordinates are then converted to pixel coordinates in the panorama using:
 
@@ -80,7 +80,7 @@ Each LUT encodes how pixels in a stereographic projection view map to sampling l
 
   where W and H are the panorama width and height.
 
-- The resulting (u, v) values are stored in a LUT, so that `cv2.remap()` can efficiently sample the correct pixels from the 360° panorama.
+- The resulting (u, v) values are stored in a LUT, LUT(θ, Φ) = (u,v), so that `cv2.remap()` can efficiently sample the correct pixels from the 360° panorama.
   
   <div align="center">
   <img src="readme_images/stereo_projection.png" alt="Stereo Projection Representation" width="550">
@@ -196,5 +196,4 @@ ros2 launch multi_person_tracker.launch.py
 
 ---
 
-*Created by Your Name — for advanced ROS 2 perception applications.*
 
