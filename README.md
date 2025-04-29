@@ -99,10 +99,15 @@ After detection on the stereographic projections, bounding boxes must be accurat
 ### 6. Global NMS (Greedy Merge)
 
 - After reprojection, bounding boxes from all projections are grouped.
-- The custom `greedy_merge_largest_box()` algorithm is applied:
-  - Detections with IoU > 0.2 are clustered together.
-  - For each cluster, only the box with the largest score-weighted area is kept.
-- This method effectively removes duplicated detections from overlapping regions and projection seams.
+- The custom greedy_merge_largest_box() algorithm is applied:
+    - Detections with IoU > 0.2 are clustered together.
+    - For each cluster, the box with the largest score-weighted area is kept.
+This method effectively removes duplicated detections from overlapping regions and projection seams. The following image illustrates the duplication problem without applying the custom NMS:
+
+<p align="center">
+    <img src="./readme_images/bboxes_overlap.png" alt="4 Bounding Boxes Overlap Problem" width="600">
+    </p>
+
 
 ### 7. Draw Annotated Image
 
