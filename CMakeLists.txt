@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.8)
-project(tracker_360)
+project(panoramic_object_detector)
 
 add_compile_options(-Wall -Wextra -Wpedantic -std=c++17)
 
