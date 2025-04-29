@@ -1,4 +1,4 @@
-# tracker\_360: 360° Panorama Object Detection Node for ROS 2
+# 360° Panorama Object Detection Node for ROS 2
 
 ## Overview
 
@@ -47,9 +47,9 @@ pip3 install --user \
 
 ```bash
 cd ~/ros2_ws/src
-git clone https://github.com/YourOrg/tracker_360.git
+git clone (https://github.com/RubenCasal/Object-detection-360.git
 cd ~/ros2_ws
-colcon build --packages-select tracker_360
+colcon build --packages-select panoramic_object_detector
 source install/setup.bash
 ```
 
@@ -159,44 +159,25 @@ This method effectively removes duplicated detections from overlapping regions a
 ### Run Node Directly
 
 ```bash
-ros2 run tracker_360 multi_person_tracker
+ros2 run panoramic_object_detector theta_node
+ros2 run panoramic_object_detector multi_person_tracker
 ```
 
 ### Run with Launch File
 
 ```bash
-ros2 launch tracker_360 multi_person_tracker.launch.py \
-  stereo_image_size:=448x448 \
-  confidence_threshold:=0.5 \
-  model_path:=/path/to/yolov8n.pt
+ros2 launch multi_person_tracker.launch.py 
 ```
 
-Launch arguments:
 
-- `stereo_image_size`: Size of each stereographic view.
-- `confidence_threshold`: Minimum score for object acceptance.
-- `model_path`: Path to your YOLO model.
 
 ### Topics
 
 | Topic Name             | Type                | Direction | Description                    |
 | ---------------------- | ------------------- | --------- | ------------------------------ |
 | `/stitched_image`      | `sensor_msgs/Image` | Sub       | Input panorama image           |
-| `/image_projection1-4` | `sensor_msgs/Image` | Pub       | Projected views for debugging  |
 | `/annotated_panorama`  | `sensor_msgs/Image` | Pub       | Final panorama with detections |
 
-## Example Commands
-
-```bash
-# Launch the node
-ros2 run tracker_360 multi_person_tracker --ros-args \
-  -p stereo_image_size:="448x448" \
-  -p confidence_threshold:=0.6 \
-  -p model_path:="~/models/yolov8m.pt"
-
-# Visualize the output
-rqt_image_view /annotated_panorama
-```
 
 ## Limitations & Future Work
 
