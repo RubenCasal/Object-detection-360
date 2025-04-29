@@ -69,7 +69,7 @@ Each LUT encodes how pixels in a stereographic projection view map to sampling l
 - A virtual tangent plane is defined, centered on the unit sphere at the desired yaw and pitch angles.
 - For every pixel (x,y) in this planar view:
   - It is mapped to a point (θ, Φ) on the sphere using the inverse stereographic projection (based on Eq. (1) from the paper).
-  - \((\theta, \phi)\) represent spherical coordinates: latitude and longitude.
+  - (θ, Φ) represent spherical coordinates: latitude and longitude.
   - These spherical coordinates are then converted to pixel coordinates in the panorama using:
 
   \[
