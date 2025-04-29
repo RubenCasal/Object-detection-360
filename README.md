@@ -59,14 +59,36 @@ source install/setup.bash
 
 ### 2. Precompute LUTs (Lookup Tables)
 
-- On node initialization, four LUTs are generated for yaw angles 0°, 90°, 180°, and 270°.
-- Each LUT defines how pixels are mapped from the panorama to the corresponding stereographic view.
+On node initialization, four **Lookup Tables (LUTs)** are generated — one for each yaw angle (0°, 90°, 180°, 270°).  
+Each LUT encodes how pixels in a stereographic projection map back to coordinates in the original equirectangular panorama.
 
-**How LUTs are generated:**
-- For each yaw angle, the panorama image is sampled into a stereographic plane.
-- The planar (x, y) coordinates are mapped into spherical coordinates (theta, phi) using `map_to_sphere`.
-- These spherical coordinates are then converted into 2D UV pixel coordinates for the panorama.
-- LUTs store this mapping, so projecting images is reduced to a fast `cv2.remap()` at runtime.
+#### 🔧 How LUTs are generated:
+
+**For each yaw direction:**
+
+- A **virtual tangent plane** is centered on the unit sphere at the target yaw angle.
+
+- For every pixel \((x, y)\) on this plane:
+  - The pixel is **projected back onto the sphere** using the **inverse stereographic model** \(d = 1\), as per Eq. (1) in the paper.
+  - This yields spherical coordinates \((\theta, \phi)\) representing latitude and longitude.
+
+- These spherical coordinates are then converted into 2D pixel coordinates in the panorama using:
+  
+\[
+u = W \cdot \frac{\phi + \pi}{2\pi}, \quad
+v = H \cdot \frac{\pi/2 - \theta}{\pi}
+\]
+  
+  where \(W\) and \(H\) are the panorama width and height.
+
+- The resulting \((u, v)\) pairs are stored in a **LUT**, allowing fast remapping via `cv2.remap()` at runtime.
+
+
+This method ensures that each of the four projections covers approximately **180° horizontal Field of View (FOV)**.  
+To preserve object continuity across view boundaries, neighboring projections are spaced **90° apart**, resulting in an **effective overlap of ~90°** between adjacent views.
+
+The stereographic model **minimizes distortion near the center of each projection**, where object detection is most accurate. This is crucial for mitigating the **geometric distortion** present in raw equirectangular images, especially near the horizontal seams.
+
 
 ### 3. Apply Projections (Parallelized)
 
