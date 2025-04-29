@@ -119,6 +119,10 @@ This method effectively removes duplicated detections from overlapping regions a
 
 - The final annotated panorama is then published on the ROS 2 topic /annotated_panorama.
 
+<div align="center">
+  <img src="readme_images/demo_360_object_detection.gif" alt="Demo 360 Object Detector" width="600">
+</div>
+
 ## ROS 2 Usage
 
 ### Run Node Directly
