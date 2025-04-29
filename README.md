@@ -2,9 +2,11 @@
 
 ## Overview
 
-`tracker_360` is a ROS 2 package that enables real-time object detection on 360° equirectangular panorama images. It uses stereographic sub-projections to divide the panorama into four views, detects objects individually, and reprojects the detections onto the panorama.
+`panoramic_object_detector` is a ROS 2 package developed for real-time object detection on 360° equirectangular panoramas captured using the **Ricoh Theta Z1** camera.
 
-This package has been specifically designed to solve the common problem of **duplicate detections** at the horizontal seams of 360° images. Objects crossing the 0°/360° boundary — such as people partially visible on each side of the panorama — can often be detected twice. Our method uses custom reprojection and merging logic to robustly **unify duplicated detections**, as illustrated below.
+It leverages stereographic sub-projections to divide the full panorama into four overlapping views, performs detection independently on each, and accurately reprojects the bounding boxes back into the original panoramic image.
+
+The system is explicitly designed to address the issue of duplicate detections along the horizontal seams of 360° imagery — especially at the 0°/360° boundary, where objects like people or vehicles often appear split and detected multiple times. A custom merging strategy is applied to robustly unify overlapping detections, as illustrated below.
 
 <p align="center">
 <img src="./readme_images/duplication_problem.png" alt="Duplicated Object Problem" width="600">
@@ -72,14 +74,17 @@ Each LUT encodes how pixels in a stereographic projection view map to sampling l
   - (θ, Φ) represent spherical coordinates: latitude and longitude.
   - These spherical coordinates are then converted to pixel coordinates in the panorama using:
 
-  \[
-  u = W \cdot \frac{\phi}{2\pi}, \quad
-  v = H \cdot \frac{\theta}{\pi}
-  \]
+  <div align="center">
+  <img src="readme_images/LUT_equation.png" alt="LUT Equations" width="300">
+</div>
 
   where W and H are the panorama width and height.
 
 - The resulting (u, v) values are stored in a LUT, so that `cv2.remap()` can efficiently sample the correct pixels from the 360° panorama.
+  
+  <div align="center">
+  <img src="readme_images/stereo_projection.png" alt="Stereo Projection Representation" width="550">
+</div>
 
 At runtime, applying `cv2.remap()` with this LUT generates a stereographic view centered at the desired yaw and pitch, with an approximate 180° horizontal Field of View (FOV).
 
@@ -146,7 +151,7 @@ This method effectively removes duplicated detections from overlapping regions a
 ## Processing Pipeline Overview
 
 <div align="center">
-  <img src="readme_images/panoramic_detector_diagram.png" alt="Pipeline Overview" width="700">
+  <img src="readme_images/panormic_detector_diagram.png" alt="Pipeline Overview" width="700">
 </div>
 
 ## ROS 2 Usage
