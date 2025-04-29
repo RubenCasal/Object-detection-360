@@ -109,15 +109,15 @@ This method effectively removes duplicated detections from overlapping regions a
     </p>
 
 
-### 7. Draw Annotated Image
+### 7. Draw and Publish Annotated Image
 
-- The selected detections are drawn with class labels and confidence scores.
-- Standard YOLO color coding is applied.
+- After selecting the final set of detections through the custom NMS, the bounding boxes are drawn onto a copy of the original panorama.
 
-### 8. Publish Final Outputs
+- Each detection is annotated with its class label and confidence score.
 
-- The annotated panorama is published on `/annotated_panorama`.
-- The individual stereographic views are optionally published on `/image_projection1`, `/image_projection2`, etc., for debugging.
+- Standard YOLO color coding is used for consistency and clarity.
+
+- The final annotated panorama is then published on the ROS 2 topic /annotated_panorama.
 
 ## ROS 2 Usage
 
