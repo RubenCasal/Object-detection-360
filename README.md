@@ -200,9 +200,13 @@ rqt_image_view /annotated_panorama
 
 ## Limitations & Future Work
 
-- **Seam Issues**: Minor misalignment artifacts may still appear for objects split between views.
-- **Inference Speed**: Planned future improvement includes ONNX+TensorRT acceleration and better inference parallelization.
-- **Dynamic FOV Adjustment**: Adapting projection FOVs based on object density for better coverage.
+- Slow inference speed due to multiple sequential steps in the pipeline. There is room for improvement through greater parallelization.
+
+- Duplicate bounding boxes may appear when objects are very close to the camera or occupy a large portion of one or more projections.
+
+- Aggressive NMS filtering may suppress valid detections of nearby objects belonging to the same class, leading to missed detections in crowded scenes.
+
+- Projection overlap could be tuned (reduced) to assess whether it helps prevent duplication artifacts for objects near the camera.
 
 ## References
 
