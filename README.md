@@ -59,35 +59,33 @@ source install/setup.bash
 
 ### 2. Precompute LUTs (Lookup Tables)
 
-On node initialization, four **Lookup Tables (LUTs)** are generated — one for each yaw angle (0°, 90°, 180°, 270°).  
-Each LUT encodes how pixels in a stereographic projection map back to coordinates in the original equirectangular panorama.
+On node initialization, four Lookup Tables (LUTs) are generated — one for each yaw angle (0°, 90°, 180°, 270°).  
+Each LUT encodes how pixels in a stereographic projection view map to sampling locations in the original equirectangular panorama.
 
-#### 🔧 How LUTs are generated:
+#### How LUTs are generated:
 
 **For each yaw direction:**
 
-- A **virtual tangent plane** is centered on the unit sphere at the target yaw angle.
+- A virtual tangent plane is defined, centered on the unit sphere at the desired yaw and pitch angles.
+- For every pixel (x,y) in this planar view:
+  - It is mapped to a point (θ, Φ) on the sphere using the inverse stereographic projection (based on Eq. (1) from the paper).
+  - \((\theta, \phi)\) represent spherical coordinates: latitude and longitude.
+  - These spherical coordinates are then converted to pixel coordinates in the panorama using:
 
-- For every pixel \((x, y)\) on this plane:
-  - The pixel is **projected back onto the sphere** using the **inverse stereographic model** \(d = 1\), as per Eq. (1) in the paper.
-  - This yields spherical coordinates \((\theta, \phi)\) representing latitude and longitude.
+  \[
+  u = W \cdot \frac{\phi}{2\pi}, \quad
+  v = H \cdot \frac{\theta}{\pi}
+  \]
 
-- These spherical coordinates are then converted into 2D pixel coordinates in the panorama using:
-  
-\[
-u = W \cdot \frac{\phi + \pi}{2\pi}, \quad
-v = H \cdot \frac{\pi/2 - \theta}{\pi}
-\]
-  
-  where \(W\) and \(H\) are the panorama width and height.
+  where W and H are the panorama width and height.
 
-- The resulting \((u, v)\) pairs are stored in a **LUT**, allowing fast remapping via `cv2.remap()` at runtime.
+- The resulting (u, v) values are stored in a LUT, so that `cv2.remap()` can efficiently sample the correct pixels from the 360° panorama.
 
+At runtime, applying `cv2.remap()` with this LUT generates a stereographic view centered at the desired yaw and pitch, with an approximate 180° horizontal Field of View (FOV).
 
-This method ensures that each of the four projections covers approximately **180° horizontal Field of View (FOV)**.  
-To preserve object continuity across view boundaries, neighboring projections are spaced **90° apart**, resulting in an **effective overlap of ~90°** between adjacent views.
+Neighboring projections are spaced 90° apart to ensure full coverage and generate an effective overlap of ~90° between adjacent views.
 
-The stereographic model **minimizes distortion near the center of each projection**, where object detection is most accurate. This is crucial for mitigating the **geometric distortion** present in raw equirectangular images, especially near the horizontal seams.
+This method concentrates detection on local undistorted areas, significantly reducing the visual distortions common in raw equirectangular images, especially near horizontal seams.
 
 
 ### 3. Apply Projections (Parallelized)
