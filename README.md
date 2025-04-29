@@ -79,7 +79,7 @@ source install/setup.bash
 
 ### 4. YOLO Object Detection (Batch Parallelizable)
 
-- All four stereographic projections are batched together and passed through a YOLO model (model-agnostic, not limited to YOLOv8).
+- All four stereographic projections are batched together and passed through a YOLO model.
 - This batch inference improves overall GPU utilization and minimizes latency.
 - Each detection outputs bounding boxes (center x, center y, width, height), confidence scores, and class IDs.
 
