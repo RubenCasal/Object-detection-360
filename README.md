@@ -123,6 +123,12 @@ This method effectively removes duplicated detections from overlapping regions a
   <img src="readme_images/demo_360_object_detection.gif" alt="Demo 360 Object Detector" width="600">
 </div>
 
+## Processing Pipeline Overview
+
+<div align="center">
+  <img src="readme_images/panoramic_detector_diagram.png" alt="Pipeline Overview" width="700">
+</div>
+
 ## ROS 2 Usage
 
 ### Run Node Directly
