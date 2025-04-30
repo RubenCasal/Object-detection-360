@@ -97,7 +97,7 @@ ament_python_install_package(${PROJECT_NAME})
 install(PROGRAMS
   scripts/detector_node.py
   scripts/yolo_tracker.py
-  scripts/multi_person_tracker.py
+  scripts/panoramic_detector.py
   scripts/crop_and_wrap.py
   scripts/stereo.py
   scripts/draw_boxes.py
