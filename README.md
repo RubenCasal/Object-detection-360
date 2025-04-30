@@ -160,13 +160,15 @@ This method effectively removes duplicated detections from overlapping regions a
 
 ```bash
 ros2 run panoramic_object_detector theta_node
-ros2 run panoramic_object_detector multi_person_tracker
+```
+```bash
+ros2 run panoramic_object_detector panoramic_detector.py
 ```
 
 ### Run with Launch File
 
 ```bash
-ros2 launch multi_person_tracker.launch.py 
+ros2 launch panoramic_object_detector panoramic_detector_launch.py
 ```
 
 
